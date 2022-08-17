@@ -4,6 +4,7 @@
 
 import json
 from operator import itemgetter
+import re
 from unicodedata import name
 import dateutil.parser
 import babel
@@ -14,6 +15,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
+from models import db, Venue, Artist, Show
 from flask_migrate import Migrate
 #----------------------------------------------------------------------------#
 # App Config.
@@ -22,78 +24,15 @@ from flask_migrate import Migrate
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
+db.init_app(app)
 
-db = SQLAlchemy(app)
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # TODO: connect to a local postgresql database
 
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-class Venue(db.Model):
-    __tablename__ = 'venues'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String())
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-    genres = db.Column(db.String(120))
-    website_link = db.Column(db.String(120))
-    seeking_talent = db.Column(db.Boolean)
-    seeking_description = db.Column(db.String(500))
-    shows = db.relationship('Show', backref='venue', lazy=True) 
-
-class Artist(db.Model):
-    __tablename__ = 'artists'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String())
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-    website_link = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean)
-    seeking_description = db.Column(db.String(500))
-    shows = db.relationship('Show', backref='artist', lazy=True)
-
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
-class Show(db.Model):
-    __tablename__ = 'shows'
-    id = db.Column(db.Integer, primary_key=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('venues.id'), nullable=False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), nullable=False)
-    start_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    
-    def show_artist(self):
-        return {
-            'artist_id': self.artist_id,
-            'artist_name': self.artist.name,
-            'artist_image_link': self.artist.image_link,
-            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-
-    def show_venue(self):
-        return {
-            'venue_id': self.venue_id,
-            'venue_name': self.venue.name,
-            'venue_image_link': self.venue.image_link,
-            'start_time': self.start_time.strftime('%Y-%m-%d %H:%M:%S')
-        }
-
-  
 # db.create_all()
 
 #----------------------------------------------------------------------------#
@@ -222,7 +161,7 @@ def create_venue_submission():
         city = form.city.data,
         state = form.state.data,
         address = form.address.data,
-        phone = form.phone.data,
+        phone = re.sub('\D', '', form.phone.data),
         image_link = form.image_link.data,
         genres = form.genres.data,
         facebook_link = form.facebook_link.data,
@@ -255,7 +194,6 @@ def create_venue_submission():
 def delete_venue(venue_id):
   # TODO: Complete this endpoint for taking a venue_id, and using
   # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
-  
   # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
   # clicking that button delete it from the db then redirect the user to the homepage
   venue = Venue.query.get(venue_id)
@@ -452,7 +390,7 @@ def create_artist_submission():
         name = form.name.data,
         city = form.city.data,
         state = form.state.data,
-        phone = form.phone.data,
+        phone = re.sub('\D', '', form.phone.data),
         image_link = form.image_link.data,
         genres = form.genres.data,
         facebook_link = form.facebook_link.data,
@@ -471,7 +409,7 @@ def create_artist_submission():
       # on successful db insert, flash success
       flash('Artist ' + request.form['name'] + ' was successfully listed!')
     else:
-      flash('An error occurred. Artist ' + form.name.data + ' could not be listed.')
+      flash(f'An error occurred. Artist {form.name.data} could not be listed.')
   else:
     flash(form.errors)
   # TODO: modify data to be the data object returned from db insertion
