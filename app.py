@@ -114,10 +114,16 @@ def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
   venue = Venue.query.get(venue_id)
-  past_shows = list(filter(lambda x: x.start_time < datetime.today(), venue.shows))
-  upcoming_shows = list(filter(lambda x: x.start_time >= datetime.today(), venue.shows))
+  # past_shows = list(filter(lambda x: x.start_time < datetime.today(), venue.shows))
+  # upcoming_shows = list(filter(lambda x: x.start_time >= datetime.today(), venue.shows))
+  # past_shows = list(map(lambda x: x.show_artist(), past_shows))
+  # upcoming_shows = list(map(lambda x: x.show_artist(), upcoming_shows))
+  
+  past_shows = db.session.query(Show).join(Venue).filter(Show.venue_id==venue_id).filter(Show.start_time < datetime.now()).all()
   past_shows = list(map(lambda x: x.show_artist(), past_shows))
+  upcoming_shows = db.session.query(Show).join(Venue).filter(Show.venue_id==venue_id).filter(Show.start_time >= datetime.now()).all()
   upcoming_shows = list(map(lambda x: x.show_artist(), upcoming_shows))
+  
   data = {
     "id": venue_id,
     "name": venue.name,
@@ -254,9 +260,16 @@ def show_artist(artist_id):
   # TODO: replace with real artist data from the artist table, using artist_id
   artist = Artist.query.get(artist_id)
   print(artist)
-  past_shows = list(filter(lambda x: x.start_time < datetime.today(), artist.shows)) 
-  upcoming_shows = list(filter(lambda x: x.start_time >= datetime.today(), artist.shows))
+  # past_shows = list(filter(lambda x: x.start_time < datetime.today(), artist.shows)) 
+  # upcoming_shows = list(filter(lambda x: x.start_time >= datetime.today(), artist.shows))
+  # past_shows = list(map(lambda x: x.show_venue(), past_shows))
+  # upcoming_shows = list(map(lambda x: x.show_venue(), upcoming_shows))
+  
+  # new_shows_query = Show.query.options(db.joinedload(Show.Venue)).filter(Show.venue_id == venue_id).filter(Show.start_time > current_time).all()
+  # new_show = list(map(Show.artist_details, new_shows_query))
+  past_shows = db.session.query(Show).join(Artist).filter(Show.artist_id==artist_id).filter(Show.start_time < datetime.now()).all()
   past_shows = list(map(lambda x: x.show_venue(), past_shows))
+  upcoming_shows = db.session.query(Show).join(Artist).filter(Show.artist_id==artist_id).filter(Show.start_time >= datetime.now()).all()
   upcoming_shows = list(map(lambda x: x.show_venue(), upcoming_shows))
 
   data = {
